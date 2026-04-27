@@ -1,4 +1,9 @@
 (() => {
+  if (window.__gafamLiveOverlayInitialized) {
+    return;
+  }
+  window.__gafamLiveOverlayInitialized = true;
+
   if (window.top !== window) {
     return;
   }
@@ -26,6 +31,16 @@
     const settings = await loadSettings();
     overlayEnabled = Boolean(settings.liveOverlayEnabled);
     updateOverlay();
+
+    browser.runtime.onMessage.addListener((message) => {
+      if (!message || message.type !== 'overlaySettingChanged') {
+        return false;
+      }
+
+      overlayEnabled = Boolean(message.liveOverlayEnabled);
+      updateOverlay();
+      return false;
+    });
 
     browser.storage.onChanged.addListener((changes, area) => {
       if (area !== 'local' || !changes[SETTINGS_KEY]) {
@@ -71,8 +86,8 @@
     overlayHost = document.createElement('div');
     overlayHost.id = 'gafam-live-overlay-host';
     overlayHost.style.position = 'fixed';
-    overlayHost.style.top = '12px';
-    overlayHost.style.right = '12px';
+    overlayHost.style.top = '8px';
+    overlayHost.style.right = '8px';
     overlayHost.style.zIndex = '2147483647';
     overlayHost.style.pointerEvents = 'none';
 
@@ -82,24 +97,24 @@
         .overlay {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 8px 10px;
-          border-radius: 12px;
-          background: rgba(15, 23, 42, 0.86);
+          gap: 7px;
+          padding: 6px 8px;
+          border-radius: 10px;
+          background: rgba(15, 23, 42, 0.72);
           color: #f8fafc;
-          border: 1px solid rgba(148, 163, 184, 0.35);
-          box-shadow: 0 10px 20px rgba(15, 23, 42, 0.3);
-          min-width: 170px;
-          max-width: min(420px, 70vw);
+          border: 1px solid rgba(148, 163, 184, 0.2);
+          box-shadow: 0 8px 14px rgba(15, 23, 42, 0.18);
+          min-width: 140px;
+          max-width: min(260px, 42vw);
           font-family: "Segoe UI", Arial, sans-serif;
         }
 
         .dot {
-          width: 10px;
-          height: 10px;
+          width: 9px;
+          height: 9px;
           border-radius: 999px;
           flex-shrink: 0;
-          margin-top: 2px;
+          margin-top: 1px;
         }
 
         .dot.gafam {
@@ -112,12 +127,12 @@
 
         .text {
           display: grid;
-          gap: 1px;
+          gap: 0;
           min-width: 0;
         }
 
         .title {
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
           white-space: nowrap;
           overflow: hidden;
@@ -125,8 +140,8 @@
         }
 
         .host {
-          font-size: 11px;
-          opacity: 0.85;
+          font-size: 10px;
+          opacity: 0.75;
           white-space: nowrap;
           overflow: hidden;
           text-overflow: ellipsis;

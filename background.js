@@ -23,6 +23,7 @@ const GAFAM_SITES = {
 
 const STORAGE_KEY = 'trackingData';
 const SETTINGS_KEY = 'settings';
+const BLOCKED_PAGE_PATH = 'pages/blocked.html';
 const MAX_VISITS = 1000;
 const OTHER_COMPANY_KEY = 'other';
 const DEFAULT_SETTINGS = {
@@ -98,6 +99,24 @@ async function refreshLiveOverlayOnOpenTabs() {
   }
 }
 
+async function notifyLiveOverlayStateOnOpenTabs(enabled) {
+  const tabs = await browser.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab || !tab.id || !isTrackableUrl(tab.url)) {
+      continue;
+    }
+
+    try {
+      await browser.tabs.sendMessage(tab.id, {
+        type: 'overlaySettingChanged',
+        liveOverlayEnabled: Boolean(enabled)
+      });
+    } catch (error) {
+      // Tab has no content script or cannot receive messages.
+    }
+  }
+}
+
 function normalizeTrackingData(data) {
   const base = createEmptyTrackingData();
   const merged = Object.assign(base, data || {});
@@ -165,10 +184,24 @@ function isExtensionUrl(url) {
 }
 
 function buildBlockedPageUrl(url, companyKey) {
-  const blockedPageUrl = new URL(browser.runtime.getURL('pages/blocked.html'));
+  const blockedPageUrl = new URL(browser.runtime.getURL(BLOCKED_PAGE_PATH));
   blockedPageUrl.searchParams.set('url', url);
   blockedPageUrl.searchParams.set('company', companyKey || '');
   return blockedPageUrl.toString();
+}
+
+function isBlockedPageUrl(url) {
+  return typeof url === 'string' && url.startsWith(browser.runtime.getURL(BLOCKED_PAGE_PATH));
+}
+
+function getOriginalUrlFromBlockedPage(url) {
+  try {
+    const blockedUrl = new URL(url);
+    const originalUrl = blockedUrl.searchParams.get('url');
+    return originalUrl && originalUrl.trim() ? originalUrl : null;
+  } catch (error) {
+    return null;
+  }
 }
 
 function getSessionLabel(companyKey) {
@@ -487,7 +520,7 @@ async function maybeBlockGafamTab(tabId, url) {
     return false;
   }
 
-  const settings = await loadSettings();
+  const settings = arguments.length > 2 ? arguments[2] : await loadSettings();
   if (!settings.blockGafamEnabled) {
     return false;
   }
@@ -511,6 +544,46 @@ async function enforceBlockingOnActiveTab() {
   await maybeBlockGafamTab(tab.id, tab.url);
 }
 
+async function enforceBlockingOnAllTabs() {
+  const settings = await loadSettings();
+  if (!settings.blockGafamEnabled) {
+    return;
+  }
+
+  const tabs = await browser.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab || !tab.id || !tab.url) {
+      continue;
+    }
+
+    if (isExtensionUrl(tab.url) || isBlockedPageUrl(tab.url)) {
+      continue;
+    }
+
+    await maybeBlockGafamTab(tab.id, tab.url, settings);
+  }
+}
+
+async function releaseBlockedTabs() {
+  const tabs = await browser.tabs.query({});
+  for (const tab of tabs) {
+    if (!tab || !tab.id || !isBlockedPageUrl(tab.url)) {
+      continue;
+    }
+
+    const originalUrl = getOriginalUrlFromBlockedPage(tab.url);
+    if (!originalUrl) {
+      continue;
+    }
+
+    try {
+      await browser.tabs.update(tab.id, { url: originalUrl });
+    } catch (error) {
+      // Ignore tabs that cannot be updated.
+    }
+  }
+}
+
 browser.runtime.onMessage.addListener((message) => {
   if (message && message.type === 'getLiveTrackingData') {
     return Promise.all([getLiveTrackingSnapshot(), getActivePageInfo()]).then(([trackingData, activePage]) => ({
@@ -525,12 +598,17 @@ browser.runtime.onMessage.addListener((message) => {
 
   if (message && message.type === 'setSettings') {
     return saveSettings(message.settings).then(async (settings) => {
-      if (settings.blockGafamEnabled) {
-        await enforceBlockingOnActiveTab();
+      if (Object.prototype.hasOwnProperty.call(message.settings || {}, 'blockGafamEnabled')) {
+        if (settings.blockGafamEnabled) {
+          await enforceBlockingOnAllTabs();
+        } else {
+          await releaseBlockedTabs();
+        }
       }
 
       if (Object.prototype.hasOwnProperty.call(message.settings || {}, 'liveOverlayEnabled')) {
         await refreshLiveOverlayOnOpenTabs();
+        await notifyLiveOverlayStateOnOpenTabs(settings.liveOverlayEnabled);
       }
 
       return { settings };

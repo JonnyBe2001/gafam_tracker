@@ -3,6 +3,14 @@
   "name": "GAFAM Tracker",
   "version": "1.0",
   "description": "Trackt, wie viel Zeit du auf GAFAM-Websites verbringst.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "@gafam-tracker",
+      "data_collection_permissions": {
+        "required": ["none"]
+      }
+    }
+  },
   "permissions": ["tabs", "storage", "windows", "alarms", "<all_urls>"],
   "background": {
     "scripts": ["background.js"]
