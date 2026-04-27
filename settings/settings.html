@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GAFAM Tracker Einstellungen</title>
+  <link rel="stylesheet" href="settings.css">
+</head>
+<body>
+  <main class="settings-shell">
+    <header>
+      <p class="eyebrow">Einstellungen</p>
+      <h1>GAFAM Tracker</h1>
+      <p class="subtitle">Steuere Overlay und Blocker direkt ueber die Toggles.</p>
+    </header>
+
+    <section class="setting-card">
+      <div class="setting-copy">
+        <h2>Live-Status Overlay</h2>
+        <p>Zeigt dauerhaft oben rechts auf Webseiten einen Statuspunkt und den Seitennamen.</p>
+      </div>
+      <label class="switch">
+        <input id="toggle-live-overlay" type="checkbox">
+        <span class="slider"></span>
+      </label>
+    </section>
+
+    <section class="setting-card">
+      <div class="setting-copy">
+        <h2>GAFAM Blocker</h2>
+        <p>Blockiert erkannte GAFAM-Seiten und leitet auf eine Hinweis-Seite weiter.</p>
+      </div>
+      <label class="switch">
+        <input id="toggle-block-gafam" type="checkbox">
+        <span class="slider"></span>
+      </label>
+    </section>
+
+    <p id="save-status" class="save-status" aria-live="polite"></p>
+  </main>
+
+  <script src="settings.js"></script>
+</body>
+</html>
