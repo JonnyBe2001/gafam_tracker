@@ -26,6 +26,7 @@ const MAX_VISITS = 1000;
 const OTHER_COMPANY_KEY = 'other';
 
 let currentSession = null;
+let browserIsFocused = true;
 
 function createEmptyTrackingData() {
   return {
@@ -80,13 +81,17 @@ async function saveTrackingData(trackingData) {
 }
 
 function isTrackableUrl(url) {
-  return typeof url === 'string' && (url.startsWith('http://') || url.startsWith('https://'));
+  return typeof url === 'string' && url.trim().length > 0;
 }
 
 function normalizeUrl(url) {
-  const parsedUrl = new URL(url);
-  parsedUrl.hash = '';
-  return parsedUrl.toString();
+  try {
+    const parsedUrl = new URL(url);
+    parsedUrl.hash = '';
+    return parsedUrl.toString();
+  } catch (error) {
+    return url;
+  }
 }
 
 function getCompanyKey(url) {
@@ -110,11 +115,23 @@ function getProviderKey(url) {
   return getCompanyKey(url) || OTHER_COMPANY_KEY;
 }
 
+function getSessionLabel(companyKey) {
+  return getCompanyLabel(companyKey || OTHER_COMPANY_KEY);
+}
+
 function getPageTitle(tab) {
   if (tab && typeof tab.title === 'string' && tab.title.trim()) {
     return tab.title.trim();
   }
   return 'Unbenannte Seite';
+}
+
+function getHostname(url) {
+  try {
+    return new URL(url).hostname;
+  } catch (error) {
+    return '';
+  }
 }
 
 function createSession(tab) {
@@ -161,14 +178,14 @@ async function closeCurrentSession(endTime = Date.now()) {
     title: session.title,
     companyKey: session.companyKey,
     providerKey: session.providerKey,
-    companyLabel: getCompanyLabel(session.companyKey),
+    companyLabel: getSessionLabel(session.companyKey),
     durationSeconds: 0
   };
 
   pageRecord.title = session.title;
   pageRecord.companyKey = session.companyKey;
   pageRecord.providerKey = session.providerKey;
-  pageRecord.companyLabel = getCompanyLabel(session.companyKey);
+  pageRecord.companyLabel = getSessionLabel(session.companyKey);
   pageRecord.durationSeconds += durationSeconds;
   trackingData.pageTotals[session.url] = pageRecord;
 
@@ -177,7 +194,7 @@ async function closeCurrentSession(endTime = Date.now()) {
     title: session.title,
     companyKey: session.companyKey,
     providerKey: session.providerKey,
-    companyLabel: getCompanyLabel(session.companyKey),
+    companyLabel: getSessionLabel(session.companyKey),
     durationSeconds,
     startedAt: new Date(session.startedAt).toISOString(),
     endedAt: new Date(endTime).toISOString()
@@ -191,6 +208,11 @@ async function closeCurrentSession(endTime = Date.now()) {
 }
 
 async function startSessionForTab(tab) {
+  if (!browserIsFocused) {
+    await closeCurrentSession();
+    return;
+  }
+
   if (!tab || !isTrackableUrl(tab.url)) {
     await closeCurrentSession();
     return;
@@ -226,11 +248,18 @@ async function handleActivatedTab(tabId) {
 
 async function handleFocusedWindow(windowId) {
   if (windowId === browser.windows.WINDOW_ID_NONE) {
+    browserIsFocused = false;
     await closeCurrentSession();
     return;
   }
 
   try {
+    const focusedWindow = await browser.windows.get(windowId);
+    if (!focusedWindow || focusedWindow.type !== 'normal') {
+      return;
+    }
+
+    browserIsFocused = true;
     const tabs = await browser.tabs.query({ active: true, windowId });
     await startSessionForTab(tabs[0]);
   } catch (error) {
@@ -239,14 +268,152 @@ async function handleFocusedWindow(windowId) {
 }
 
 async function handleUpdatedTab(tabId, changeInfo, tab) {
-  if (changeInfo.status !== 'complete') {
+  if (changeInfo.url && currentSession && currentSession.tabId === tabId) {
+    try {
+      const liveTab = await browser.tabs.get(tabId);
+      await startSessionForTab(liveTab);
+    } catch (error) {
+      await startSessionForTab(tab);
+    }
     return;
   }
 
-  if (currentSession && currentSession.tabId === tabId) {
+  if (changeInfo.status === 'complete' && currentSession && currentSession.tabId === tabId) {
     await startSessionForTab(tab);
   }
 }
+
+function cloneTrackingData(trackingData) {
+  return {
+    totalTime: trackingData.totalTime,
+    gafamTime: trackingData.gafamTime,
+    providerTotals: { ...trackingData.providerTotals },
+    companyTotals: { ...trackingData.companyTotals },
+    pageTotals: Object.fromEntries(
+      Object.entries(trackingData.pageTotals).map(([url, value]) => [url, { ...value }])
+    ),
+    visitLog: [...trackingData.visitLog]
+  };
+}
+
+function applySessionDuration(trackingData, session, durationSeconds) {
+  if (durationSeconds <= 0) {
+    return;
+  }
+
+  trackingData.totalTime += durationSeconds;
+  if (session.companyKey) {
+    trackingData.gafamTime += durationSeconds;
+    trackingData.companyTotals[session.companyKey] = (trackingData.companyTotals[session.companyKey] || 0) + durationSeconds;
+  }
+
+  trackingData.providerTotals[session.providerKey] = (trackingData.providerTotals[session.providerKey] || 0) + durationSeconds;
+
+  const pageRecord = trackingData.pageTotals[session.url] || {
+    url: session.url,
+    title: session.title,
+    companyKey: session.companyKey,
+    providerKey: session.providerKey,
+    companyLabel: getSessionLabel(session.companyKey),
+    durationSeconds: 0
+  };
+
+  pageRecord.title = session.title;
+  pageRecord.companyKey = session.companyKey;
+  pageRecord.providerKey = session.providerKey;
+  pageRecord.companyLabel = getSessionLabel(session.companyKey);
+  pageRecord.durationSeconds += durationSeconds;
+  trackingData.pageTotals[session.url] = pageRecord;
+}
+
+async function getLiveTrackingSnapshot() {
+  const storedTrackingData = await loadTrackingData();
+  if (!currentSession) {
+    return storedTrackingData;
+  }
+
+  const snapshot = cloneTrackingData(storedTrackingData);
+  const elapsedSeconds = Math.max(0, (Date.now() - currentSession.startedAt) / 1000);
+  applySessionDuration(snapshot, currentSession, elapsedSeconds);
+  return snapshot;
+}
+
+async function getActivePageInfo() {
+  try {
+    const tab = await getActiveTabFromNormalWindow();
+
+    if (!tab || !tab.url) {
+      return {
+        title: 'Keine aktive Seite',
+        url: '',
+        hostname: '',
+        isGafam: false,
+        isTrackable: false
+      };
+    }
+
+    const trackable = isTrackableUrl(tab.url);
+    const companyKey = trackable ? getCompanyKey(tab.url) : null;
+
+    return {
+      title: getPageTitle(tab),
+      url: tab.url,
+      hostname: getHostname(tab.url),
+      isGafam: Boolean(companyKey),
+      isTrackable: trackable,
+      companyKey,
+      companyLabel: companyKey ? getCompanyLabel(companyKey) : 'Nicht-GAFAM'
+    };
+  } catch (error) {
+    return {
+      title: 'Aktive Seite unbekannt',
+      url: '',
+      hostname: '',
+      isGafam: false,
+      isTrackable: false
+    };
+  }
+}
+
+async function getActiveTabFromNormalWindow() {
+  const activeInLastFocused = await browser.tabs.query({ active: true, lastFocusedWindow: true });
+  const candidate = activeInLastFocused[0];
+  if (candidate) {
+    try {
+      const windowInfo = await browser.windows.get(candidate.windowId);
+      if (windowInfo && windowInfo.type === 'normal') {
+        return candidate;
+      }
+    } catch (error) {
+      // Fall through to global normal-window lookup.
+    }
+  }
+
+  const activeTabs = await browser.tabs.query({ active: true });
+  for (const tab of activeTabs) {
+    try {
+      const windowInfo = await browser.windows.get(tab.windowId);
+      if (windowInfo && windowInfo.type === 'normal') {
+        return tab;
+      }
+    } catch (error) {
+      // Ignore tabs whose window details can't be resolved.
+    }
+  }
+
+  return null;
+}
+
+browser.runtime.onMessage.addListener((message) => {
+  if (message && message.type === 'getLiveTrackingData') {
+    return Promise.all([getLiveTrackingSnapshot(), getActivePageInfo()]).then(([trackingData, activePage]) => ({
+      trackingData,
+      activePage
+    }));
+  }
+
+  return false;
+});
 
 browser.tabs.onActivated.addListener((activeInfo) => {
   void handleActivatedTab(activeInfo.tabId);
@@ -274,8 +441,8 @@ if (browser.runtime.onSuspend) {
 
 async function initializeTracking() {
   try {
-    const tabs = await browser.tabs.query({ active: true, currentWindow: true });
-    await startSessionForTab(tabs[0]);
+    const tab = await getActiveTabFromNormalWindow();
+    await startSessionForTab(tab);
   } catch (error) {
     console.error('Unable to initialize tracker', error);
   }

@@ -7,26 +7,124 @@ const COMPANY_ORDER = [
 ];
 
 const NON_GAFAM = { key: 'other', label: 'Nicht-GAFAM', color: '#546e7a' };
+const LIVE_REFRESH_INTERVAL_MS = 1000;
+
+let latestTrackingData = null;
+let liveRefreshTimerId = null;
+let latestActivePage = null;
 
 document.addEventListener('DOMContentLoaded', () => {
   void initializePopup();
 });
 
 async function initializePopup() {
-  const data = await loadTrackingData();
-  renderSummary(data);
-  renderUnifiedChart(data);
-  renderCompanyBars(data);
-  renderPageList(data);
+  await refreshPopupData();
 
   document.getElementById('export-data').addEventListener('click', () => {
-    exportCsv(data);
+    exportCsv(latestTrackingData || createEmptyTrackingData());
   });
+
+  liveRefreshTimerId = window.setInterval(() => {
+    void refreshPopupData();
+  }, LIVE_REFRESH_INTERVAL_MS);
+
+  window.addEventListener('unload', () => {
+    if (liveRefreshTimerId) {
+      window.clearInterval(liveRefreshTimerId);
+      liveRefreshTimerId = null;
+    }
+  });
+}
+
+async function refreshPopupData() {
+  const snapshot = await loadLiveTrackingData();
+  latestTrackingData = snapshot.trackingData;
+  latestActivePage = snapshot.activePage;
+
+  renderActivePage(snapshot.activePage);
+  renderSummary(snapshot.trackingData);
+  renderUnifiedChart(snapshot.trackingData);
+  renderCompanyBars(snapshot.trackingData);
+  renderPageList(snapshot.trackingData);
+}
+
+function createEmptyTrackingData() {
+  return {
+    totalTime: 0,
+    gafamTime: 0,
+    providerTotals: {},
+    companyTotals: {},
+    pageTotals: {},
+    visitLog: []
+  };
+}
+
+function normalizeTrackingData(data) {
+  const trackingData = data || createEmptyTrackingData();
+  trackingData.totalTime = trackingData.totalTime || 0;
+  trackingData.gafamTime = trackingData.gafamTime || 0;
+  trackingData.providerTotals = trackingData.providerTotals || {};
+  trackingData.companyTotals = trackingData.companyTotals || {};
+  trackingData.pageTotals = trackingData.pageTotals || {};
+  trackingData.visitLog = Array.isArray(trackingData.visitLog) ? trackingData.visitLog : [];
+  return trackingData;
+}
+
+async function loadLiveTrackingData() {
+  try {
+    const response = await browser.runtime.sendMessage({ type: 'getLiveTrackingData' });
+    if (response && response.trackingData) {
+      return {
+        trackingData: normalizeTrackingData(response.trackingData),
+        activePage: normalizeActivePage(response.activePage)
+      };
+    }
+  } catch (error) {
+    console.warn('Live tracking unavailable, using storage fallback.', error);
+  }
+
+  return {
+    trackingData: await loadTrackingData(),
+    activePage: createEmptyActivePage()
+  };
+}
+
+function createEmptyActivePage() {
+  return {
+    title: 'Aktive Seite unbekannt',
+    hostname: '-',
+    isGafam: false
+  };
+}
+
+function normalizeActivePage(activePage) {
+  const fallback = createEmptyActivePage();
+  if (!activePage) {
+    return fallback;
+  }
+
+  return {
+    title: activePage.title || fallback.title,
+    hostname: activePage.hostname || '-',
+    isGafam: Boolean(activePage.isGafam)
+  };
+}
+
+function renderActivePage(activePage) {
+  const normalized = normalizeActivePage(activePage);
+  const dot = document.getElementById('active-site-dot');
+  const title = document.getElementById('active-site-title');
+  const host = document.getElementById('active-site-host');
+
+  dot.classList.toggle('status-gafam', normalized.isGafam);
+  dot.classList.toggle('status-non-gafam', !normalized.isGafam);
+  title.textContent = normalized.title;
+  host.textContent = normalized.hostname;
 }
 
 async function loadTrackingData() {
   const data = await browser.storage.local.get(['trackingData', 'totalTime', 'gafamTime']);
-  const trackingData = data.trackingData || {
+  const fallbackTrackingData = {
     totalTime: data.totalTime || 0,
     gafamTime: data.gafamTime || 0,
     providerTotals: {},
@@ -35,11 +133,7 @@ async function loadTrackingData() {
     visitLog: []
   };
 
-  trackingData.providerTotals = trackingData.providerTotals || {};
-  trackingData.companyTotals = trackingData.companyTotals || {};
-  trackingData.pageTotals = trackingData.pageTotals || {};
-  trackingData.visitLog = Array.isArray(trackingData.visitLog) ? trackingData.visitLog : [];
-  return trackingData;
+  return normalizeTrackingData(data.trackingData || fallbackTrackingData);
 }
 
 function renderSummary(data) {
