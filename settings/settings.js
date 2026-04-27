@@ -13,8 +13,7 @@ async function initializeSettings() {
   const blockToggle = document.getElementById('toggle-block-gafam');
 
   const settings = await loadSettings();
-  liveToggle.checked = Boolean(settings.liveOverlayEnabled);
-  blockToggle.checked = Boolean(settings.blockGafamEnabled);
+  applySettingsToToggles(settings, liveToggle, blockToggle);
 
   liveToggle.addEventListener('change', async () => {
     await saveSettings({ liveOverlayEnabled: liveToggle.checked });
@@ -23,6 +22,21 @@ async function initializeSettings() {
   blockToggle.addEventListener('change', async () => {
     await saveSettings({ blockGafamEnabled: blockToggle.checked });
   });
+
+  browser.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local' || !changes[SETTINGS_KEY]) {
+      return;
+    }
+
+    const nextSettings = normalizeSettings(changes[SETTINGS_KEY].newValue);
+    applySettingsToToggles(nextSettings, liveToggle, blockToggle);
+    renderSaveStatus('Einstellungen wurden synchronisiert.');
+  });
+}
+
+function applySettingsToToggles(settings, liveToggle, blockToggle) {
+  liveToggle.checked = Boolean(settings.liveOverlayEnabled);
+  blockToggle.checked = Boolean(settings.blockGafamEnabled);
 }
 
 function normalizeSettings(settings) {

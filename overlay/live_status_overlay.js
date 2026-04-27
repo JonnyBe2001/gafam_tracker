@@ -92,69 +92,87 @@
     overlayHost.style.pointerEvents = 'none';
 
     const shadow = overlayHost.attachShadow({ mode: 'open' });
-    shadow.innerHTML = `
-      <style>
-        .overlay {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          padding: 6px 8px;
-          border-radius: 10px;
-          background: rgba(15, 23, 42, 0.72);
-          color: #f8fafc;
-          border: 1px solid rgba(148, 163, 184, 0.2);
-          box-shadow: 0 8px 14px rgba(15, 23, 42, 0.18);
-          min-width: 140px;
-          max-width: min(260px, 42vw);
-          font-family: "Segoe UI", Arial, sans-serif;
-        }
+    const style = document.createElement('style');
+    style.textContent = `
+      .overlay {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        padding: 6px 8px;
+        border-radius: 10px;
+        background: rgba(15, 23, 42, 0.72);
+        color: #f8fafc;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 8px 14px rgba(15, 23, 42, 0.18);
+        min-width: 140px;
+        max-width: min(260px, 42vw);
+        font-family: "Segoe UI", Arial, sans-serif;
+      }
 
-        .dot {
-          width: 9px;
-          height: 9px;
-          border-radius: 999px;
-          flex-shrink: 0;
-          margin-top: 1px;
-        }
+      .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        flex-shrink: 0;
+        margin-top: 1px;
+      }
 
-        .dot.gafam {
-          background: #dc2626;
-        }
+      .dot.gafam {
+        background: #dc2626;
+      }
 
-        .dot.non-gafam {
-          background: #16a34a;
-        }
+      .dot.non-gafam {
+        background: #16a34a;
+      }
 
-        .text {
-          display: grid;
-          gap: 0;
-          min-width: 0;
-        }
+      .text {
+        display: grid;
+        gap: 0;
+        min-width: 0;
+      }
 
-        .title {
-          font-size: 11px;
-          font-weight: 700;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
+      .title {
+        font-size: 11px;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
 
-        .host {
-          font-size: 10px;
-          opacity: 0.75;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
-        }
-      </style>
-      <div class="overlay">
-        <span class="dot non-gafam" id="status-dot"></span>
-        <div class="text">
-          <div class="title" id="status-title"></div>
-          <div class="host" id="status-host"></div>
-        </div>
-      </div>
+      .host {
+        font-size: 10px;
+        opacity: 0.75;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
     `;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'overlay';
+
+    const dot = document.createElement('span');
+    dot.className = 'dot non-gafam';
+    dot.id = 'status-dot';
+
+    const text = document.createElement('div');
+    text.className = 'text';
+
+    const title = document.createElement('div');
+    title.className = 'title';
+    title.id = 'status-title';
+
+    const host = document.createElement('div');
+    host.className = 'host';
+    host.id = 'status-host';
+
+    text.appendChild(title);
+    text.appendChild(host);
+    overlay.appendChild(dot);
+    overlay.appendChild(text);
+
+    shadow.appendChild(style);
+    shadow.appendChild(overlay);
 
     document.documentElement.appendChild(overlayHost);
     return overlayHost;

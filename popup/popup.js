@@ -168,19 +168,32 @@ function renderUnifiedChart(data) {
     maxSize: 280
   });
 
-  const baseLegend = providers.map((provider) => {
+  const legendFragment = document.createDocumentFragment();
+  providers.forEach((provider) => {
     const value = data.providerTotals?.[provider.key] || 0;
     const share = total > 0 ? Math.round((value / total) * 100) : 0;
-    return `
-      <div class="legend-item">
-        <span class="legend-swatch" style="background: ${provider.color}"></span>
-        <span class="legend-label">${provider.label}</span>
-        <strong>${formatSeconds(value)}s · ${share}%</strong>
-      </div>
-    `;
-  }).join('');
 
-  legend.innerHTML = baseLegend;
+    const item = document.createElement('div');
+    item.className = 'legend-item';
+
+    const swatch = document.createElement('span');
+    swatch.className = 'legend-swatch';
+    swatch.style.background = provider.color;
+
+    const label = document.createElement('span');
+    label.className = 'legend-label';
+    label.textContent = provider.label;
+
+    const valueText = document.createElement('strong');
+    valueText.textContent = `${formatSeconds(value)}s · ${share}%`;
+
+    item.appendChild(swatch);
+    item.appendChild(label);
+    item.appendChild(valueText);
+    legendFragment.appendChild(item);
+  });
+
+  legend.replaceChildren(legendFragment);
 }
 
 function renderCompanyBars(data) {
@@ -191,20 +204,40 @@ function renderCompanyBars(data) {
   }));
   const maxValue = Math.max(...totals.map((entry) => entry.value), 0);
 
-  container.innerHTML = totals.map((entry) => {
+  const fragment = document.createDocumentFragment();
+  totals.forEach((entry) => {
     const width = maxValue > 0 ? Math.max(6, Math.round((entry.value / maxValue) * 100)) : 0;
-    return `
-      <div class="bar-row">
-        <div class="bar-meta">
-          <span>${entry.label}</span>
-          <strong>${formatSeconds(entry.value)}</strong>
-        </div>
-        <div class="bar-track">
-          <div class="bar-fill" style="width: ${width}%; background: ${entry.color}"></div>
-        </div>
-      </div>
-    `;
-  }).join('');
+
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+
+    const meta = document.createElement('div');
+    meta.className = 'bar-meta';
+
+    const label = document.createElement('span');
+    label.textContent = entry.label;
+
+    const value = document.createElement('strong');
+    value.textContent = formatSeconds(entry.value);
+
+    meta.appendChild(label);
+    meta.appendChild(value);
+
+    const track = document.createElement('div');
+    track.className = 'bar-track';
+
+    const fill = document.createElement('div');
+    fill.className = 'bar-fill';
+    fill.style.width = `${width}%`;
+    fill.style.background = entry.color;
+
+    track.appendChild(fill);
+    row.appendChild(meta);
+    row.appendChild(track);
+    fragment.appendChild(row);
+  });
+
+  container.replaceChildren(fragment);
 }
 
 function renderPageList(data) {
@@ -215,22 +248,48 @@ function renderPageList(data) {
     .slice(0, 8);
 
   if (!pageEntries.length) {
-    container.innerHTML = '<div class="empty-state">Noch keine Seiten erfasst.</div>';
+    const emptyState = document.createElement('div');
+    emptyState.className = 'empty-state';
+    emptyState.textContent = 'Noch keine Seiten erfasst.';
+    container.replaceChildren(emptyState);
     return;
   }
 
-  container.innerHTML = pageEntries.map((entry) => `
-    <article class="page-item">
-      <div class="page-copy">
-        <h3>${escapeHtml(entry.title || entry.url)}</h3>
-        <p>${escapeHtml(entry.companyLabel || 'Unbekannt')}</p>
-      </div>
-      <div class="page-duration">
-        <strong>${formatSeconds(entry.durationSeconds || 0)}</strong>
-        <span>besucht</span>
-      </div>
-    </article>
-  `).join('');
+  const fragment = document.createDocumentFragment();
+  pageEntries.forEach((entry) => {
+    const item = document.createElement('article');
+    item.className = 'page-item';
+
+    const copy = document.createElement('div');
+    copy.className = 'page-copy';
+
+    const title = document.createElement('h3');
+    title.textContent = entry.title || entry.url;
+
+    const company = document.createElement('p');
+    company.textContent = entry.companyLabel || 'Unbekannt';
+
+    copy.appendChild(title);
+    copy.appendChild(company);
+
+    const duration = document.createElement('div');
+    duration.className = 'page-duration';
+
+    const durationValue = document.createElement('strong');
+    durationValue.textContent = formatSeconds(entry.durationSeconds || 0);
+
+    const durationLabel = document.createElement('span');
+    durationLabel.textContent = 'besucht';
+
+    duration.appendChild(durationValue);
+    duration.appendChild(durationLabel);
+
+    item.appendChild(copy);
+    item.appendChild(duration);
+    fragment.appendChild(item);
+  });
+
+  container.replaceChildren(fragment);
 }
 
 function exportCsv(data) {
@@ -333,13 +392,4 @@ function csvValue(value) {
     return `"${text.replace(/"/g, '""')}"`;
   }
   return text;
-}
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
 }

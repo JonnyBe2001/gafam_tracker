@@ -9,10 +9,6 @@ document.addEventListener('DOMContentLoaded', () => {
   copy.textContent = `Diese Seite wurde als ${company}-Anbieter erkannt und durch den Blocker gestoppt.`;
   urlNode.textContent = url;
 
-  document.getElementById('go-back').addEventListener('click', () => {
-    window.history.back();
-  });
-
   document.getElementById('open-settings').addEventListener('click', () => {
     const settingsUrl = browser.runtime.getURL('settings/settings.html');
     window.location.href = settingsUrl;
