@@ -1,30 +1,250 @@
+* {
+  box-sizing: border-box;
+}
+
 body {
-  width: 300px;
-  padding: 10px;
-  font-family: Arial, sans-serif;
+  width: 420px;
+  margin: 0;
+  font-family: "Segoe UI", Arial, sans-serif;
+  color: #0f172a;
+  background:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.18), transparent 35%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
 }
 
-.stats {
-  margin-bottom: 20px;
+.shell {
+  padding: 18px;
 }
 
-.chart-container {
-  width: 100%;
-  height: 200px;
+.hero {
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.hero-copy,
+.panel-head p {
+  margin: 6px 0 0;
+  color: #475569;
+  font-size: 13px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stat-card,
+.panel {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 18px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+}
+
+.stat-card {
+  padding: 12px;
+  min-height: 92px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.stat-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stat-card strong {
+  display: block;
+  font-size: 26px;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.stat-unit {
+  font-size: 12px;
+  color: #64748b;
+}
+
+.accent-total {
+  border-top: 3px solid #2563eb;
+}
+
+.accent-gafam {
+  border-top: 3px solid #ef4444;
+}
+
+.accent-share {
+  border-top: 3px solid #f59e0b;
+}
+
+.accent-pages {
+  border-top: 3px solid #10b981;
+}
+
+.panel {
+  padding: 14px;
+  margin-bottom: 12px;
+}
+
+.panel-head h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.chart-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px 0 2px;
+}
+
+.chart-wrap-large {
+  padding-bottom: 0;
+}
+
+#market-chart {
+  max-width: 100%;
+}
+
+.legend {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.legend-item {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.legend-label {
+  color: #334155;
+}
+
+.bars {
+  display: grid;
+  gap: 10px;
+}
+
+.bar-row {
+  display: grid;
+  gap: 6px;
+}
+
+.bar-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 13px;
+}
+
+.bar-meta strong {
+  color: #0f172a;
+}
+
+.bar-track {
+  height: 10px;
+  background: #e2e8f0;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: inherit;
+}
+
+.page-list {
+  display: grid;
+  gap: 10px;
+}
+
+.page-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.page-copy h3 {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.page-copy p,
+.page-duration span {
+  margin: 4px 0 0;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.page-duration {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.page-duration strong {
+  display: block;
+  font-size: 16px;
+}
+
+.empty-state {
+  padding: 18px;
+  border-radius: 14px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  color: #64748b;
+  text-align: center;
 }
 
 #export-data {
-  display: block;
   width: 100%;
-  padding: 8px;
-  margin-top: 10px;
-  background: #4285f4;
-  color: white;
+  margin-top: 4px;
+  padding: 12px 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #2563eb, #0f766e);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
   cursor: pointer;
+  box-shadow: 0 14px 24px rgba(37, 99, 235, 0.22);
 }
 
 #export-data:hover {
-  background: #3367d6;
+  filter: brightness(1.03);
 }

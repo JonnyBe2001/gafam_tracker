@@ -1,21 +1,70 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8">
   <title>GAFAM Tracker</title>
   <link rel="stylesheet" href="popup.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-  <h1>GAFAM Tracker</h1>
-  <div class="stats">
-    <p>Gesamtzeit: <span id="total-time">0</span> Sekunden</p>
-    <p>GAFAM-Zeit: <span id="gafam-time">0</span> Sekunden</p>
-    <p>Anteil: <span id="percentage">0</span>%</p>
-  </div>
-  <div class="chart-container">
-    <canvas id="time-chart"></canvas>
-  </div>
-  <button id="export-data">Daten exportieren</button>
+  <main class="shell">
+    <header class="hero">
+      <p class="eyebrow">Browser-Tracking</p>
+      <h1>GAFAM Tracker</h1>
+      <p class="hero-copy">Aktive Seiten, Firmenzuordnung und Zeitanteile auf einen Blick.</p>
+    </header>
+
+    <section class="stats-grid">
+      <article class="stat-card accent-total">
+        <span class="stat-label">Gesamtzeit</span>
+        <strong id="total-time">0</strong>
+        <span class="stat-unit">Sekunden</span>
+      </article>
+      <article class="stat-card accent-gafam">
+        <span class="stat-label">GAFAM-Zeit</span>
+        <strong id="gafam-time">0</strong>
+        <span class="stat-unit">Sekunden</span>
+      </article>
+      <article class="stat-card accent-share">
+        <span class="stat-label">Anteil</span>
+        <strong><span id="percentage">0</span>%</strong>
+        <span class="stat-unit">auf GAFAM-Seiten</span>
+      </article>
+      <article class="stat-card accent-pages">
+        <span class="stat-label">Seiten</span>
+        <strong id="tracked-pages">0</strong>
+        <span class="stat-unit">erkannte Seiten</span>
+      </article>
+    </section>
+
+    <section class="panel chart-panel">
+      <div class="panel-head">
+        <h2>Zeit-Atlas</h2>
+        <p>Anbieteranteile über alle besuchten Seiten.</p>
+      </div>
+      <div class="chart-wrap chart-wrap-large">
+        <canvas id="market-chart" aria-label="Anbieter- und GAFAM-Verteilung"></canvas>
+      </div>
+      <div id="provider-legend" class="legend"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Firmenverteilung</h2>
+        <p>Wie viel Zeit auf welche der fünf Firmen entfällt</p>
+      </div>
+      <div id="company-bars" class="bars"></div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-head">
+        <h2>Top-GAFAM-Seiten</h2>
+        <p>Die am längsten besuchten GAFAM-Seiten</p>
+      </div>
+      <div id="page-list" class="page-list"></div>
+    </section>
+
+    <button id="export-data" type="button">CSV exportieren</button>
+  </main>
   <script src="popup.js"></script>
 </body>
 </html>
