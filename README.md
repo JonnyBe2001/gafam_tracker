@@ -11,3 +11,8 @@ Firefox-Erweiterung zur Erfassung von GAFAM-Seiten mit Firmenzuordnung, Zeitvisu
 # Daten
 - Das Popup zeigt Gesamtzeit, GAFAM-Zeit, Firmenverteilung und die Top-Seiten an.
 - Der CSV-Export enthält die erfassten GAFAM-Visits mit Seite, Firma und Dauer.
+
+# Einstellungen
+- Ueber das Zahnradsymbol im Popup oeffnet sich die Einstellungsseite.
+- Toggle "Live-Status Overlay": zeigt einen permanenten Status oben rechts auf Webseiten mit Punktfarbe und Seitennamen.
+- Toggle "GAFAM Blocker": blockiert erkannte GAFAM-Seiten und leitet auf eine Hinweis-Seite weiter.

@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="GAFAM Tracker Icon">
+  <defs>
+    <linearGradient id="bg" x1="16" y1="12" x2="112" y2="116" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0f172a"/>
+      <stop offset="1" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="ring" x1="28" y1="28" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#16a34a"/>
+      <stop offset="1" stop-color="#dc2626"/>
+    </linearGradient>
+  </defs>
+  <rect x="10" y="10" width="108" height="108" rx="26" fill="url(#bg)"/>
+  <circle cx="64" cy="64" r="34" fill="none" stroke="url(#ring)" stroke-width="10"/>
+  <circle cx="64" cy="64" r="11" fill="#f8fafc"/>
+  <path d="M64 24v14M64 90v14M24 64h14M90 64h14" stroke="#cbd5e1" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="64" cy="64" r="4" fill="#0f172a"/>
+  <path d="M64 32a32 32 0 0 1 22.6 9.4" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>
+  <path d="M64 96a32 32 0 0 1-22.6-9.4" fill="none" stroke="#60a5fa" stroke-width="6" stroke-linecap="round"/>
+</svg>

@@ -22,8 +22,13 @@ const GAFAM_SITES = {
 };
 
 const STORAGE_KEY = 'trackingData';
+const SETTINGS_KEY = 'settings';
 const MAX_VISITS = 1000;
 const OTHER_COMPANY_KEY = 'other';
+const DEFAULT_SETTINGS = {
+  liveOverlayEnabled: false,
+  blockGafamEnabled: false
+};
 
 let currentSession = null;
 let browserIsFocused = true;
@@ -51,6 +56,46 @@ function createEmptyTrackingData() {
     pageTotals: {},
     visitLog: []
   };
+}
+
+function normalizeSettings(settings) {
+  return Object.assign({}, DEFAULT_SETTINGS, settings || {});
+}
+
+async function loadSettings() {
+  const data = await browser.storage.local.get(SETTINGS_KEY);
+  return normalizeSettings(data[SETTINGS_KEY]);
+}
+
+async function saveSettings(partialSettings) {
+  const current = await loadSettings();
+  const next = normalizeSettings(Object.assign({}, current, partialSettings || {}));
+  await browser.storage.local.set({ [SETTINGS_KEY]: next });
+  return next;
+}
+
+async function injectLiveOverlayIntoTab(tabId) {
+  try {
+    await browser.tabs.executeScript(tabId, {
+      file: 'overlay/live_status_overlay.js'
+    });
+  } catch (error) {
+    // Some tabs cannot be scripted (for example browser internal pages).
+  }
+}
+
+async function refreshLiveOverlayOnOpenTabs() {
+  const settings = await loadSettings();
+  if (!settings.liveOverlayEnabled) {
+    return;
+  }
+
+  const tabs = await browser.tabs.query({});
+  for (const tab of tabs) {
+    if (tab && tab.id && isTrackableUrl(tab.url)) {
+      await injectLiveOverlayIntoTab(tab.id);
+    }
+  }
 }
 
 function normalizeTrackingData(data) {
@@ -113,6 +158,17 @@ function getCompanyLabel(companyKey) {
 
 function getProviderKey(url) {
   return getCompanyKey(url) || OTHER_COMPANY_KEY;
+}
+
+function isExtensionUrl(url) {
+  return typeof url === 'string' && url.startsWith(browser.runtime.getURL(''));
+}
+
+function buildBlockedPageUrl(url, companyKey) {
+  const blockedPageUrl = new URL(browser.runtime.getURL('pages/blocked.html'));
+  blockedPageUrl.searchParams.set('url', url);
+  blockedPageUrl.searchParams.set('company', companyKey || '');
+  return blockedPageUrl.toString();
 }
 
 function getSessionLabel(companyKey) {
@@ -268,6 +324,28 @@ async function handleFocusedWindow(windowId) {
 }
 
 async function handleUpdatedTab(tabId, changeInfo, tab) {
+  const updatedUrl = changeInfo.url || tab?.url;
+
+  if (changeInfo.url) {
+    const wasBlocked = await maybeBlockGafamTab(tabId, changeInfo.url);
+    if (wasBlocked) {
+      if (currentSession && currentSession.tabId === tabId) {
+        await closeCurrentSession();
+      }
+      return;
+    }
+  }
+
+  if (changeInfo.status === 'complete' && updatedUrl) {
+    const wasBlocked = await maybeBlockGafamTab(tabId, updatedUrl);
+    if (wasBlocked) {
+      if (currentSession && currentSession.tabId === tabId) {
+        await closeCurrentSession();
+      }
+      return;
+    }
+  }
+
   if (changeInfo.url && currentSession && currentSession.tabId === tabId) {
     try {
       const liveTab = await browser.tabs.get(tabId);
@@ -404,12 +482,59 @@ async function getActiveTabFromNormalWindow() {
   return null;
 }
 
+async function maybeBlockGafamTab(tabId, url) {
+  if (!url || !isTrackableUrl(url) || isExtensionUrl(url)) {
+    return false;
+  }
+
+  const settings = await loadSettings();
+  if (!settings.blockGafamEnabled) {
+    return false;
+  }
+
+  const companyKey = getCompanyKey(url);
+  if (!companyKey) {
+    return false;
+  }
+
+  const blockedPageUrl = buildBlockedPageUrl(url, companyKey);
+  await browser.tabs.update(tabId, { url: blockedPageUrl });
+  return true;
+}
+
+async function enforceBlockingOnActiveTab() {
+  const tab = await getActiveTabFromNormalWindow();
+  if (!tab || !tab.id || !tab.url) {
+    return;
+  }
+
+  await maybeBlockGafamTab(tab.id, tab.url);
+}
+
 browser.runtime.onMessage.addListener((message) => {
   if (message && message.type === 'getLiveTrackingData') {
     return Promise.all([getLiveTrackingSnapshot(), getActivePageInfo()]).then(([trackingData, activePage]) => ({
       trackingData,
       activePage
     }));
+  }
+
+  if (message && message.type === 'getSettings') {
+    return loadSettings().then((settings) => ({ settings }));
+  }
+
+  if (message && message.type === 'setSettings') {
+    return saveSettings(message.settings).then(async (settings) => {
+      if (settings.blockGafamEnabled) {
+        await enforceBlockingOnActiveTab();
+      }
+
+      if (Object.prototype.hasOwnProperty.call(message.settings || {}, 'liveOverlayEnabled')) {
+        await refreshLiveOverlayOnOpenTabs();
+      }
+
+      return { settings };
+    });
   }
 
   return false;
@@ -449,3 +574,4 @@ async function initializeTracking() {
 }
 
 void initializeTracking();
+void refreshLiveOverlayOnOpenTabs();

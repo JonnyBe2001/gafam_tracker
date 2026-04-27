@@ -20,6 +20,11 @@ document.addEventListener('DOMContentLoaded', () => {
 async function initializePopup() {
   await refreshPopupData();
 
+  document.getElementById('open-settings').addEventListener('click', () => {
+    const settingsUrl = browser.runtime.getURL('settings/settings.html');
+    browser.tabs.create({ url: settingsUrl });
+  });
+
   document.getElementById('export-data').addEventListener('click', () => {
     exportCsv(latestTrackingData || createEmptyTrackingData());
   });
