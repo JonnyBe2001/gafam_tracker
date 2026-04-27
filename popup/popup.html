@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>GAFAM Tracker</title>
+  <link rel="stylesheet" href="popup.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <h1>GAFAM Tracker</h1>
+  <div class="stats">
+    <p>Gesamtzeit: <span id="total-time">0</span> Sekunden</p>
+    <p>GAFAM-Zeit: <span id="gafam-time">0</span> Sekunden</p>
+    <p>Anteil: <span id="percentage">0</span>%</p>
+  </div>
+  <div class="chart-container">
+    <canvas id="time-chart"></canvas>
+  </div>
+  <button id="export-data">Daten exportieren</button>
+  <script src="popup.js"></script>
+</body>
+</html>

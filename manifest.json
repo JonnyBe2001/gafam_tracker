@@ -1,0 +1,23 @@
+{
+  "manifest_version": 2,
+  "name": "GAFAM Tracker",
+  "version": "1.0",
+  "description": "Trackt, wie viel Zeit du auf GAFAM-Websites verbringst.",
+  "permissions": ["tabs", "storage", "alarms", "<all_urls>"],
+  "background": {
+    "scripts": ["background.js"]
+  },
+  "browser_action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
